@@ -10,16 +10,17 @@
 
 // place where new character in buffer is stored
 // if it is 10 then buffer is full
-int index=0; 
+int id=0, len=0, len1=11; 
 
-char buffer[10];
+char buffer[11];
 char string[] = "Hello World";
 
 struct lock l;
 struct condition isNotEmpty, isNotFull;
 
 void producer_consumer(unsigned int num_producer, unsigned int num_consumer);
-
+void* producer(void* num_producer);
+void* consumer(void* num_consumer);
 
 void test_producer_consumer(void)
 {
@@ -36,34 +37,45 @@ void test_producer_consumer(void)
     pass();
 }
 
-void producer(void* num_producer){
-    lock_acquire(&l);
-    while(index>=10){ // buffer is full
-        // wait until consumer removes something from it
-        cond_wait(&isNotFull, &l);
+void* producer(void* num_producer){
+    while(true){
+        lock_acquire(&l);
+        if(id==11){
+            cond_wait(&isNotFull,&l);
+        }
+        if(len==11) {
+            lock_release(&l);
+            break;
+        }
+        // buffer is not full
+        // store the next character in buffer
+        buffer[id]=string[id];
+        id++;
+        len++;
+        // set buffer to not empty
+        // so that consumer can resume
+        cond_signal(&isNotEmpty, &l);
+        lock_release(&l);
     }
-    // buffer is not full
-    // store the next character in buffer
-    buffer[index]=string[index];
-    index++;
-    // set buffer to not empty
-    // so that consumer can resume
-    cond_signal(&isNotEmpty, &l);
-    lock_release(&l);
 }
 
-void consumer(void* num_consumer){
-    lock_acquire(&l);
-    while (index<=0){ // buffer is empty
-        // so wait for producer to put something
-        cond_wait(&isNotEmpty, &l);
-    }
-    // print character
-    for(int i=0; i<sizeof(buffer); i++){
-        printf("%c",buffer[i]);
-        index--;
-        // set the buffer to not full
-        // so that producer can resume
+void* consumer(void* num_consumer){
+    while(true){
+        lock_acquire(&l);
+        if (id==-1){ // buffer is empty
+            // so wait for producer to put something
+            cond_wait(&isNotEmpty, &l);
+        }
+        if(len1==0){
+            lock_release(&l);
+            break;
+        }
+        char c = buffer[0];
+        for(int i=0; i<sizeof(buffer);i++)
+            buffer[i]=buffer[i+1];
+        // print character
+        printf("%c",c);
+        id--; len1--;
         cond_signal(&isNotFull, &l);
         lock_release(&l);
     }
@@ -76,14 +88,17 @@ void producer_consumer(UNUSED unsigned int num_producer, UNUSED unsigned int num
     lock_init(&l);
     cond_init(&isNotEmpty);
     cond_init(&isNotFull);
-    for(int i=0; i<num_producer; i++){
+    tid_t pr[num_producer], co[num_consumer];
+    int i;
+    for(i=0; i<num_producer; i++){
         char producers[16];
-        thread_create(producers, PRI_DEFAULT, producer, &i);
+        pr[i] = thread_create(producers, i, producer, &i);
     }
-    for(int i=0; i<num_consumer; i++){
+    for(i=0; i<num_consumer; i++){
         char consumers[16];
-        thread_create(consumers, PRI_DEFAULT, consumer, &i);
+        co[i] = thread_create(consumers, i, consumer, &i);
     }
+    return;
 }
 
 
