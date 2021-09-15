@@ -57,6 +57,7 @@ void* producer(void* num_producer){
         cond_signal(&isNotEmpty, &l);
         lock_release(&l);
     }
+    return;
 }
 
 void* consumer(void* num_consumer){
@@ -79,6 +80,7 @@ void* consumer(void* num_consumer){
         cond_signal(&isNotFull, &l);
         lock_release(&l);
     }
+    return;
 }
 
 void producer_consumer(UNUSED unsigned int num_producer, UNUSED unsigned int num_consumer)
