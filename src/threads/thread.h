@@ -92,7 +92,7 @@ struct thread
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
-   int64_t wakeup // used by timer_sleep to wake up thread
+   int64_t wakeup; // used by timer_sleep to wake up thread
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
