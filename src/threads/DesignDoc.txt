@@ -1,0 +1,168 @@
+>> Fill in the names, email addresses and matriculation numbers of your group members.
+
+Hitarth Gandhi   hitarth.g@iitgn.ac.in 19110087
+Sanskar Nalkande anil.ns@iitgn.ac.in   19110201
+Vishal Soni      jayesh.p@iitgn.ac.in  19110207
+
+---- PRELIMINARIES ----
+
+>> If you have any preliminary comments on your submission, notes for the
+>> TAs, or extra credit, please give them here.
+
+>> Please cite any offline or online sources you consulted while
+>> preparing your submission, other than the Pintos documentation, course
+>> text, lecture notes, and course staff.
+
+			     ALARM CLOCK
+			     ===========
+
+---- DATA STRUCTURES ----
+
+>> A1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+a) In timer.c added a pintos list blocked_threads:
+list_init(&blocked_threads)
+We use this list to store all the threads that have been blocked.
+
+b) In thread.h, added a new 'struct' member, 'wakeup':
+int64_t wakeup
+We use this int64_t in order to unblock a blocked thread after passing 'wakeup' cpu ticks through time_interrupt_handler. We use this since this will take less time than calling thread_yield continuously.
+
+c) Declaring bool function 'cmp' in threads.h and defining it in threads.c
+
+bool cmp(const struct list_elem* e1, const struct list_elem* e2, void* aux UNUSED){
+  struct thread* t1 = list_entry(e1, struct thread, elem);
+  struct thread* t2 = list_entry(e2, struct thread, elem);
+  return t1->wakeup < t2->wakeup;
+}
+Using this function, we check which thread has the smallest 'wakeup' (wakeup as defined above). We put the threads in correct order using this function into the blocked_threads
+
+d) struct list_elem* t;
+e) struct thread* thread_to_unblock;
+
+Both of these variables are used to check if the 'wakeup' has already passed or not in all the threads in the element by iterating through them.
+
+---- ALGORITHMS ----
+
+>> A2: Briefly describe what happens in a call to timer_sleep(),
+>> including the effects of the timer interrupt handler.
+
+First, we take the value of 'wakeup' for the current thread and update its value to wakeup+ticks. This will postpone the time at which current thread is unblocked by ticks. Now, the thread is blocked and it is added into the list 'blocked_threads' as the name suggests. Now, using the two variables 'struct list_elem* t' and 'struct thread* thread_to_unblock' to iterate through the list 'blocked_threads' and check if 'wakeup' has passed or not for each thread. This is all done in the timer_interrupt function.
+
+>> A3: What steps are taken to minimize the amount of time spent in
+>> the timer interrupt handler?
+
+As mentioned while first explaining 'blocked_threads', we put the thread that is blocked in the list 'blocked_threads' instead of continuously calling thread_yield. This will save us the extra cpu cycles.
+
+---- SYNCHRONIZATION ----
+
+>> A4: How are race conditions avoided when multiple threads call
+>> timer_sleep() simultaneously?
+
+Only the thread returned by thread_current() will have access to timer_sleep() since only one thread can access this function at a time. This is because we are disabling the interrupts and using our own method mentioned above.
+
+>> A5: How are race conditions avoided when a timer interrupt occurs
+>> during a call to timer_sleep()?
+
+Since we are first putting the current thread into the list 'blocked_threads' and then blocking it, the race conditions are automatically avoided.
+
+---- RATIONALE ----
+
+>> A6: Why did you choose this design?  In what ways is it superior to
+>> another design you considered?
+
+In the assignment, we were given hints as "put it on the ready queue after they have waited for the right amount of time" on the project website. We implemented this ready queue as an ordered list 'blocked_threads' and modified the 'timer_interrupt' to iterate throught the list and check if they have waited for the right amount of time.
+
+                             PROD/CONS
+	  		     =========
+
+---- SYNCHRONIZATION ----
+
+>> B1: How does your solution guarantee that consumers will hold until
+>> there is something to consume in the buffer?
+We used an if condition to check if the buffer is empty. The thread will be asked to wait until the buffer is not empty using the method cond_wait(&isNotEmpty, &l).
+
+>> B2: How does your solution guarantee that producers will hold until
+>> there is some free space in the buffer?
+We've used an if condition that checks for empty space in the buffer. If the buffer is full, the function cond_wait(&isNotFull, &l) will ask the thread to wait until consumer removes something from it.
+
+>> B3: How does your solution preserve a FIFO semantics i.e., the first
+>> character produced will be the first to be consumed?
+We maintain an index counter which maintains the index of last inserted element into buffer, kind of like the end of the queue.
+When the consumer thread is invoked, we print the first character in the buffer and left shift the elements of buffer from buffer[1]. We also decrement the index. This is analogous to pop_front() function.
+In the producer thread, producer puts character into buffer[index] and increments index. This is analogous to push_back() function.
+
+Thus the character inserted into buffer first will be consumed first.
+
+---- RATIONALE ----
+
+>> B4: Give an intuition for why your program preserves safety.
+To preserve safety, we're using the locks on the buffer. When a producer or consumer performs an action on the buffer, it is locked, and the lock is released after the activity is completed. The Buffer will be locked with lock_acquire(&l) and unlocked using lock_release(&l).
+
+>> B5: Why did you choose this design? Did you consider other design
+>> alternatives? In what ways is it superior to another design you considered?
+By using semaphores and keeping track of the index to the next character for both the producer and the consumer, we were able to eliminate the possibility of a synchronization error, such as printing Hlloe Wrldo instead of the correct string. Using the lock also guarantees that the buffer is used exclusively (no two producers, no two consumers, no one producer one consumer at the same time). Another suggestion we had was to assign a letter to each thread and have it wait for a particular amount of time (for Example H must not wait, e wait 1, l wait 2, second l wait 3 units, and so on).
+
+
+
+			     NARROW BRIDGE
+			     =============
+
+---- SYNCHRONIZATION ----
+
+>> C1: How does your solution guarantee that no more that 3 vehicles
+>> are crossing the bridge in the same direction?
+
+We implemented a semaphore that is intialized from three and it decrements each time a vehicle enters the bridge and increments each time it leaves. Hence when 3 vehicles are present on the bridge, this semaphore will reach a value of zero and if another vehicle tries to enter the bridge, it will be blocked since semaphores cannot contain a negative integer.
+
+>> C2: What prevents vehicles from opposite directions from crossing the
+>> bridge simultaneously?
+
+We maintain two semaphores for vehicles entering from both sides. When a vehicle enters from one side, we put the semaphore corresponding to the other side on hold and wait for the semaphore corresponding to the same side to be released. Hence, if a vehicle from the other side tries to enter the bridge while a vehicle is already on the bridge, the semaphore will not allow it to proceed.
+
+>> C3: How does your solution grant priority to emergency vehicles over
+>> the queue of vehicles ahead in the same direction?
+
+We maintain two semaphores for the number of emergency vehicles on each side of the bridge. 
+
+>> C4: How do you guarantee that despite having priority, emergency vehicles
+>> do not start crossing the bridge while there are still vehicles crossing
+>> it in the oposite direction?
+
+Although the emergency vehicles have higher priority, they still require the semaphores mentioned in C2 to be released which will only be released if there is no vehicle crossing the bridge in the opposite direction. Hence emergency vehicles shall not pass if another vehicle is crossing the bridge in opposite direction.
+
+>> C5: Explain with examples why your solution does not preserve neither
+>> fairness nor freedom from starvation, other than what has been indicated
+>> for emergency vehicles.
+
+---- RATIONALE ----
+
+>> C6: Why did you choose this design? Did you consider other design
+>> alternatives? In what ways is it superior to another design you considered?
+
+
+			   SURVEY QUESTIONS
+			   ================
+
+Answering these questions is optional, but it will help us improve the
+course in future semesters.  Feel free to tell us anything you
+want--these questions are just to spur your thoughts.  You may also
+choose to respond anonymously in the course evaluations at the end of
+the semester.
+
+>> In your opinion, was this assignment, or any one of the three problems
+>> in it, too easy or too hard?  Did it take too long or too little time?
+
+>> Did you find that working on a particular part of the assignment gave
+>> you greater insight into some aspect of OS design?
+
+>> Is there some particular fact or hint we should give students in
+>> future semesters to help them solve the problems?  Conversely, did you
+>> find any of our guidance to be misleading?
+
+>> Do you have any suggestions for the TAs to more effectively assist
+>> students, either for future semesters or the remaining projects?
+
+>> Any other comments?
