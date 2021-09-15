@@ -542,24 +542,6 @@ thread_schedule_tail (struct thread *prev)
     }
 }
 
-void thread_schedule_tail_new (struct thread *prev)
-{
-  struct thread *cur = running_thread ();
-  
-  ASSERT (intr_get_level () == INTR_OFF);
-
-  /* Mark us as running. */
-  cur->status = THREAD_RUNNING;
-
-  /* Start new time slice. */
-  thread_ticks = 0;
-
-#ifdef USERPROG
-  /* Activate the new address space. */
-  process_activate ();
-#endif
-}
-
 /* Schedules a new process.  At entry, interrupts must be off and
    the running process's state must have been changed from
    running to some other state.  This function finds another
@@ -583,21 +565,6 @@ schedule (void)
   thread_schedule_tail (prev);
 }
 
-void schedule_new (void) 
-{
-  struct thread *cur = running_thread ();
-  struct thread *next = next_thread_to_run ();
-  struct thread *prev = NULL;
-
-  ASSERT (intr_get_level () == INTR_OFF);
-  ASSERT (cur->status != THREAD_RUNNING);
-  ASSERT (is_thread (next));
-
-  if (cur != next)
-    prev = switch_threads (cur, next);
-  thread_schedule_tail_new  (prev);
-}
-
 /* Returns a tid to use for a new thread. */
 static tid_t
 allocate_tid (void) 
@@ -611,10 +578,7 @@ allocate_tid (void)
 
   return tid;
 }
-struct thread* next_thread(void){
-  if(list_empty(&ready_list)) return idle_thread;
-  else return list_entry(list_pop_front(&ready_list), struct thread, elem);
-}
+
 bool cmp(const struct list_elem* e1, const struct list_elem* e2, void* aux UNUSED){
   struct thread* t1 = list_entry(e1, struct thread, elem);
   struct thread* t2 = list_entry(e2, struct thread, elem);

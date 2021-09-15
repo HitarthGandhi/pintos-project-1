@@ -138,10 +138,6 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
-struct thread* next_thread(void);
-void schedule_new(void);
-void thread_schedule_tail_new(struct thread* prev);
-
 // custom cmp func to sort threads by their wakeup times
 bool cmp(const struct list_elem*, const struct list_elem*, void*);
 
