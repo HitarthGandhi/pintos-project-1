@@ -2,6 +2,17 @@
     "files.associations": {
         "array": "c",
         "*.tcc": "c",
-        "tuple": "c"
+        "tuple": "c",
+        "exception": "c",
+        "fstream": "c",
+        "istream": "c",
+        "new": "c",
+        "ostream": "c",
+        "sstream": "c",
+        "stdexcept": "c",
+        "streambuf": "c",
+        "type_traits": "c",
+        "*.inc": "c",
+        "algorithm": "c"
     }
 }
